@@ -1153,11 +1153,76 @@ class ShadowIslandGame {
   }
 
   initEventListeners() {
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setSize(width, height);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+      handleResize();
+      setTimeout(handleResize, 100);
+      setTimeout(handleResize, 300);
     });
+
+    // Mobile Touch Drag for Aiming (High sensitivity for fast, responsive phone camera rotation)
+    let lookTouchId = null;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    const touchSensitivity = 0.0075; // Elevated mobile sensitivity
+
+    window.addEventListener('touchstart', (e) => {
+      if (!this.matchActive) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        // Only claim touch if on the right 65% of screen or not touching joystick/action buttons
+        if (touch.clientX > window.innerWidth * 0.35 && lookTouchId === null) {
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (target && (target.closest('#joystick-zone') || target.closest('#hud-touch-actions button') || target.closest('.tactical-action-bar button'))) {
+            continue;
+          }
+          lookTouchId = touch.identifier;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!this.matchActive || lookTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === lookTouchId) {
+          const dx = touch.clientX - lastTouchX;
+          const dy = touch.clientY - lastTouchY;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+
+          const sens = this.mouse.isADS ? (touchSensitivity * 0.55) : touchSensitivity;
+          this.cameraYaw -= dx * sens;
+          this.cameraPitch -= dy * sens;
+          this.cameraPitch = Math.max(-0.6, Math.min(1.0, this.cameraPitch));
+          break;
+        }
+      }
+    }, { passive: true });
+
+    const handleTouchEnd = (e) => {
+      if (lookTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === lookTouchId) {
+          lookTouchId = null;
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
 
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;

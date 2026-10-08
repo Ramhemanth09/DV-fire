@@ -1430,3 +1430,266 @@ body, html {
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(1.03); opacity: 0.85; }
 }
+
+/* =========================================================
+   MOBILE PHONE RESPONSIVE ADAPTATION & ORIENTATION SUPPORT
+   ========================================================= */
+@media (max-width: 920px), (max-height: 560px) {
+  /* Prevent browser gestures & scrolling */
+  body, html, #game-canvas-container, #ui-container {
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  /* Screen 1: Landing */
+  .landing-hero {
+    max-width: 94vw;
+    padding: 10px;
+  }
+  .game-logo-title {
+    font-size: 3.8rem;
+    letter-spacing: 3px;
+  }
+  .tagline {
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+    margin: 8px 0 20px 0;
+  }
+  .landing-cta-group {
+    flex-direction: column;
+    width: 100%;
+    max-width: 300px;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .btn-primary-yellow, .btn-secondary-outline {
+    width: 100%;
+    font-size: 1.25rem;
+    padding: 10px 16px;
+  }
+
+  /* Screen 2: Main Menu */
+  .top-nav-bar {
+    height: 55px;
+    padding: 0 15px;
+  }
+  .logo-small {
+    font-size: 1.6rem;
+  }
+  .currency-card {
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+  .profile-chip {
+    padding: 4px 10px;
+  }
+  .profile-name { font-size: 0.8rem; }
+  .profile-level { font-size: 0.68rem; }
+
+  .tactical-sidebar {
+    top: 65px;
+    left: 12px;
+    width: 130px;
+    gap: 5px;
+  }
+  .nav-item {
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    gap: 6px;
+  }
+
+  .main-action-deck {
+    bottom: 20px;
+    right: 15px;
+    min-width: auto;
+  }
+  .mode-preview-card {
+    min-width: 220px;
+    padding: 10px 14px;
+  }
+  .mode-title { font-size: 1.4rem; }
+  .mode-desc { font-size: 0.75rem; }
+  .btn-start-match-massive {
+    width: 240px;
+    height: 60px;
+  }
+  .start-main { font-size: 1.8rem; }
+  .start-sub { font-size: 0.7rem; }
+
+  /* Modals (Roster, Loadout, Modes) */
+  .screen-modal-content, .screen-modal-content.wide {
+    width: 95vw;
+    max-height: 88vh;
+    padding: 15px;
+    overflow-y: auto;
+  }
+  .modal-title { font-size: 1.6rem; }
+  .character-selection-layout {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .char-roster-list {
+    flex-direction: row;
+    overflow-x: auto;
+    max-height: none;
+    padding-bottom: 8px;
+  }
+  .char-card {
+    min-width: 140px;
+    padding: 8px 10px;
+  }
+  .char-big-name { font-size: 2.2rem; }
+  .stat-row { gap: 8px; }
+  .stat-label { width: 90px; font-size: 0.78rem; }
+
+  .loadout-layout {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  /* In-Game HUD Scaling */
+  .compass-wrapper {
+    width: 240px;
+    height: 34px;
+    top: 8px;
+  }
+  .compass-ribbon { font-size: 1.05rem; gap: 14px; }
+
+  .hud-top-right {
+    top: 8px;
+    right: 12px;
+    gap: 6px;
+  }
+  .match-stat-chip {
+    padding: 4px 8px;
+    font-size: 0.82rem;
+  }
+  .threat-chip { font-size: 0.75rem; }
+
+  .minimap-container {
+    width: 110px;
+    height: 110px;
+    top: 8px;
+    left: 10px;
+  }
+
+  .hud-quick-tactical-bar {
+    top: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 6px;
+  }
+  .tactical-action-btn {
+    padding: 5px 9px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .radio-banner {
+    top: 80px;
+    padding: 6px 14px;
+  }
+  .radio-msg { font-size: 0.8rem; }
+
+  /* Bottom Player Status & Weapon Deck */
+  .hud-bottom-bar {
+    bottom: 8px;
+    left: 10px;
+    right: 10px;
+  }
+  .player-vitals-card {
+    width: 190px;
+    padding: 6px 10px;
+    gap: 4px;
+  }
+  .vital-tag { width: 55px; font-size: 0.7rem; }
+  .vital-track { height: 9px; }
+  .vital-num { font-size: 0.78rem; }
+
+  .weapon-hud-deck {
+    padding: 6px 14px;
+    gap: 10px;
+  }
+  .weapon-title { font-size: 1.2rem; }
+  .mag-ammo { font-size: 2rem; }
+  .res-ammo { font-size: 1.1rem; }
+
+  /* Mobile Touch Controls Positioning */
+  .touch-controls-left {
+    bottom: 75px;
+    left: 12px;
+    gap: 6px;
+  }
+  .dpad-run-btn {
+    padding: 4px 12px;
+    font-size: 1rem;
+  }
+  .joystick-zone {
+    width: 120px;
+    height: 120px;
+  }
+  .joystick-base {
+    width: 110px;
+    height: 110px;
+  }
+  .joystick-knob {
+    width: 48px;
+    height: 48px;
+  }
+
+  .touch-controls-right {
+    bottom: 75px;
+    right: 10px;
+    width: 180px;
+    height: 180px;
+  }
+  .fire-btn {
+    width: 68px;
+    height: 68px;
+    bottom: 5px;
+    right: 5px;
+  }
+  .fire-btn .btn-glyph { font-size: 1.8rem; }
+  .ads-btn {
+    width: 50px;
+    height: 50px;
+    bottom: 80px;
+    right: 8px;
+  }
+  .jump-btn {
+    width: 52px;
+    height: 52px;
+    bottom: 8px;
+    right: 85px;
+  }
+  .crouch-btn {
+    width: 48px;
+    height: 48px;
+    bottom: 70px;
+    right: 75px;
+  }
+  .reload-btn {
+    width: 46px;
+    height: 46px;
+    bottom: 130px;
+    right: 45px;
+  }
+
+  .hud-controls-hint {
+    display: none; /* Hide text keyboard hints on mobile screens to save space */
+  }
+
+  /* Result Screen on Phone */
+  .result-modal-box {
+    width: 94vw;
+    padding: 20px;
+  }
+  .result-headline { font-size: 3rem; }
+  .result-sub { font-size: 0.95rem; margin-bottom: 15px; }
+  .result-stats-matrix {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .rs-val { font-size: 1.6rem; }
+}
