@@ -1,0 +1,12 @@
+{
+  "name": "shadow-island",
+  "version": "1.0.0",
+  "description": "Shadow Island - 3D Offline Tactical Battle Royale Shooter",
+  "main": "index.html",
+  "scripts": {
+    "start": "node web/server.js"
+  },
+  "keywords": ["battle-royale", "threejs", "game", "3d", "offline"],
+  "author": "Ramhemanth09",
+  "license": "MIT"
+}

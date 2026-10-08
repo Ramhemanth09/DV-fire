@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SHADOW ISLAND - Offline Tactical Battle Royale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Rajdhani:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <!-- Three.js for 3D Game Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="bg-dark select-none">
+  <!-- 3D Canvas Viewport -->
+  <div id="game-canvas-container">
+    <canvas id="three-canvas"></canvas>
+  </div>
+
+  <!-- UI Overlay Layers Container (9 Screens) -->
+  <div id="ui-container">
+
+    <!-- SCREEN 1: HOME / LANDING -->
+    <section id="screen-home" class="screen-view active">
+      <div class="landing-hero">
+        <div class="brand-badge">TACTICAL BATTLE ROYALE · OFFLINE EDITION</div>
+        <h1 class="game-logo-title">SHADOW<span class="text-yellow">ISLAND</span></h1>
+        <p class="tagline">SURVIVE · LOOT · FIGHT · BE THE LAST</p>
+        
+        <div class="landing-cta-group">
+          <button id="btn-home-play" class="btn-primary-yellow">
+            <span class="btn-icon">▶</span> ENTER COMBAT ZONE
+          </button>
+          <button id="btn-home-trailer" class="btn-secondary-outline">
+            <span>TACTICAL OVERVIEW</span>
+          </button>
+        </div>
+
+        <div class="offline-pill">
+          <span class="status-dot"></span> 100% OFFLINE &bull; ADVANCED AI BOT SIMULATION &bull; 60 FPS
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: MAIN MENU -->
+    <section id="screen-main-menu" class="screen-view">
+      <!-- Top Status Header -->
+      <header class="top-nav-bar">
+        <div class="logo-small">SHADOW<span class="text-yellow">ISLAND</span></div>
+        <div class="currency-group">
+          <div class="currency-card">
+            <span class="curr-icon gold">🪙</span>
+            <span id="player-coins" class="curr-val">18,450</span>
+          </div>
+          <div class="currency-card">
+            <span class="curr-icon gem">💎</span>
+            <span id="player-gems" class="curr-val">340</span>
+          </div>
+          <div class="profile-chip">
+            <div class="profile-avatar">R</div>
+            <div class="profile-info">
+              <span class="profile-name">SHADOW_REAPER</span>
+              <span class="profile-level text-yellow">LV. 14 ELITE</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Left Tactical Sidebar -->
+      <nav class="tactical-sidebar">
+        <button class="nav-item active" data-nav="play"><span class="icon">⚔️</span> PLAY</button>
+        <button class="nav-item" data-nav="character"><span class="icon">👤</span> OPERATOR</button>
+        <button class="nav-item" data-nav="weapons"><span class="icon">🔫</span> WEAPONS</button>
+        <button class="nav-item" data-nav="inventory"><span class="icon">🎒</span> LOADOUT</button>
+        <button class="nav-item" data-nav="modes"><span class="icon">🗺️</span> MAP & MODE</button>
+        <button class="nav-item" data-nav="settings"><span class="icon">⚙️</span> SETTINGS</button>
+        <button class="nav-item text-danger" id="btn-back-landing"><span class="icon">🚪</span> LOGOUT</button>
+      </nav>
+
+      <!-- Center-Right Action Deck -->
+      <div class="main-action-deck">
+        <div class="mode-preview-card">
+          <div class="mode-badge">STANDARD CLASSIFIED</div>
+          <h2 class="mode-title">SOLO SURVIVAL BATTLE</h2>
+          <p class="mode-desc">Map: <strong class="text-yellow">Shadow Island (Military Sector)</strong> &bull; Opponents: <strong class="text-yellow">50 Competitors (Adaptive AI)</strong></p>
+          <div class="difficulty-tag">AI DIFFICULTY: <span id="current-diff-display" class="text-yellow">HARD</span></div>
+        </div>
+
+        <button id="btn-start-match" class="btn-start-match-massive">
+          <div class="btn-start-inner">
+            <span class="start-sub">READY FOR COMBAT DROP</span>
+            <span class="start-main">START MATCH</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: MODE & DIFFICULTY SELECTION -->
+    <section id="screen-modes" class="screen-view">
+      <div class="screen-modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">MISSION CONFIGURATION</h2>
+          <button class="btn-close-modal" data-close="modes">✕</button>
+        </div>
+
+        <div class="mode-grid">
+          <div class="mode-option selected">
+            <div class="mode-card-badge">ACTIVE</div>
+            <h3 class="card-name">BATTLE ROYALE SOLO</h3>
+            <p class="card-desc">1 Human Player vs 49 Lethal AI Bots with Behavior Tree tactical logic.</p>
+          </div>
+          <div class="mode-option locked">
+            <div class="mode-card-badge locked-badge">LOCKED</div>
+            <h3 class="card-name">DUO ASSAULT</h3>
+            <p class="card-desc">Fight alongside 1 AI Squadmate against 24 enemy pairs.</p>
+          </div>
+          <div class="mode-option locked">
+            <div class="mode-card-badge locked-badge">LOCKED</div>
+            <h3 class="card-name">SQUAD SUPREMACY</h3>
+            <p class="card-desc">4-Player offline Fireteam tactical elimination.</p>
+          </div>
+        </div>
+
+        <h3 class="section-subtitle">AI TACTICAL DIFFICULTY</h3>
+        <div class="difficulty-selector-row">
+          <button class="diff-btn" data-diff="Easy">
+            <span class="diff-title">EASY</span>
+            <span class="diff-stat">Reaction 1.0s &bull; Acc 30%</span>
+          </button>
+          <button class="diff-btn" data-diff="Normal">
+            <span class="diff-title">NORMAL</span>
+            <span class="diff-stat">Reaction 0.6s &bull; Acc 50%</span>
+          </button>
+          <button class="diff-btn active" data-diff="Hard">
+            <span class="diff-title">HARD</span>
+            <span class="diff-stat">Reaction 0.3s &bull; Flanks & Smokes</span>
+          </button>
+          <button class="diff-btn" data-diff="Extreme">
+            <span class="diff-title">EXTREME</span>
+            <span class="diff-stat">Reaction 0.15s &bull; Lethal Focus</span>
+          </button>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary-yellow" data-close="modes">APPLY & CONFIRM</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: CHARACTER SELECTION -->
+    <section id="screen-character" class="screen-view">
+      <div class="screen-modal-content wide">
+        <div class="modal-header">
+          <h2 class="modal-title">OPERATOR ROSTER</h2>
+          <button class="btn-close-modal" data-close="character">✕</button>
+        </div>
+
+        <div class="character-selection-layout">
+          <div class="char-roster-list">
+            <div class="char-card active" data-char="raven">
+              <div class="char-thumb">🦅</div>
+              <div class="char-meta">
+                <span class="char-name">RAVEN</span>
+                <span class="char-class text-yellow">Scout &bull; Shadow Sense</span>
+              </div>
+            </div>
+            <div class="char-card" data-char="nova">
+              <div class="char-thumb">🛡️</div>
+              <div class="char-meta">
+                <span class="char-name">NOVA</span>
+                <span class="char-class">Vanguard &bull; Kinetic Shield</span>
+              </div>
+            </div>
+            <div class="char-card" data-char="zayn">
+              <div class="char-thumb">⚡</div>
+              <div class="char-meta">
+                <span class="char-name">ZAYN</span>
+                <span class="char-class">Duelist &bull; Adrenaline Rush</span>
+              </div>
+            </div>
+            <div class="char-card" data-char="titan">
+              <div class="char-thumb">🦍</div>
+              <div class="char-meta">
+                <span class="char-name">TITAN</span>
+                <span class="char-class">Juggernaut &bull; Fortify</span>
+              </div>
+            </div>
+            <div class="char-card" data-char="arrow">
+              <div class="char-thumb">🎯</div>
+              <div class="char-meta">
+                <span class="char-name">ARROW</span>
+                <span class="char-class">Marksman &bull; Eagle Eye</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="char-details-panel">
+            <div class="char-headline">
+              <h1 id="detail-char-name" class="char-big-name">RAVEN</h1>
+              <span id="detail-char-title" class="char-badge">TACTICAL SCOUT SPECIALIST</span>
+            </div>
+            <p id="detail-char-desc" class="char-lore">
+              Ex-recon specialist capable of detecting enemy audio pulses and moving with reduced sound signature across rough terrain.
+            </p>
+
+            <div class="stat-bars-container">
+              <div class="stat-row">
+                <span class="stat-label">SPEED</span>
+                <div class="stat-track"><div id="stat-speed" class="stat-fill" style="width: 88%"></div></div>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">DEFENSE</span>
+                <div class="stat-track"><div id="stat-defense" class="stat-fill" style="width: 62%"></div></div>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">ATTACK</span>
+                <div class="stat-track"><div id="stat-attack" class="stat-fill" style="width: 78%"></div></div>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">SPECIAL ABILITY</span>
+                <div class="stat-track"><div id="stat-ability" class="stat-fill" style="width: 90%"></div></div>
+              </div>
+            </div>
+
+            <div class="ability-card">
+              <div class="ability-icon">👁️</div>
+              <div class="ability-info">
+                <h4 id="detail-ability-name" class="text-yellow">SHADOW SENSE (PASSIVE)</h4>
+                <p id="detail-ability-desc">Highlights audio footstep waves from enemies within 35 meters on the compass tape.</p>
+              </div>
+            </div>
+
+            <button id="btn-select-operator" class="btn-primary-yellow">DEPLOY WITH THIS OPERATOR</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 5: INVENTORY / LOADOUT -->
+    <section id="screen-inventory" class="screen-view">
+      <div class="screen-modal-content wide">
+        <div class="modal-header">
+          <h2 class="modal-title">COMBAT LOADOUT & BACKPACK</h2>
+          <button class="btn-close-modal" data-close="inventory">✕</button>
+        </div>
+
+        <div class="loadout-layout">
+          <!-- Equipped Primary Slots -->
+          <div class="equipped-slots-column">
+            <h3 class="section-subtitle">EQUIPPED ARMAMENT</h3>
+            <div class="weapon-slot-card active-slot">
+              <span class="slot-tag">PRIMARY WEAPON</span>
+              <div class="slot-flex">
+                <div class="wpn-name">M4A1 SHADOW AR</div>
+                <div class="wpn-ammo-badge">5.56mm &bull; 30/180</div>
+              </div>
+              <div class="wpn-stats-mini">DMG: 32 &bull; RPM: 680 &bull; RNG: 150m</div>
+            </div>
+
+            <div class="weapon-slot-card">
+              <span class="slot-tag">SECONDARY WEAPON</span>
+              <div class="slot-flex">
+                <div class="wpn-name">M1887 THUNDER SG</div>
+                <div class="wpn-ammo-badge">12-Gauge &bull; 2/24</div>
+              </div>
+              <div class="wpn-stats-mini">DMG: 140 &bull; PELLETS: 8 &bull; RNG: 20m</div>
+            </div>
+
+            <div class="weapon-slot-card">
+              <span class="slot-tag">SIDEARM</span>
+              <div class="slot-flex">
+                <div class="wpn-name">TACTICAL 9MM</div>
+                <div class="wpn-ammo-badge">9mm &bull; 15/45</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Armor & Backpack Grid -->
+          <div class="backpack-column">
+            <div class="backpack-header">
+              <h3 class="section-subtitle">BACKPACK CAPACITY</h3>
+              <span class="capacity-indicator"><strong class="text-yellow">85</strong> / 200 KG</span>
+            </div>
+            
+            <div class="gear-badges-row">
+              <div class="gear-item-badge">🪖 HELMET LV.2 (40% REDUCTION)</div>
+              <div class="gear-item-badge">🦺 VEST LV.3 (50% REDUCTION)</div>
+              <div class="gear-item-badge">🎒 EXPANDED RIG LV.2</div>
+            </div>
+
+            <div class="inventory-grid">
+              <div class="grid-item">
+                <div class="item-icon">💉</div>
+                <div class="item-title">MEDKIT x2</div>
+              </div>
+              <div class="grid-item">
+                <div class="item-icon">⚡</div>
+                <div class="item-title">ENERGY DRINK x4</div>
+              </div>
+              <div class="grid-item">
+                <div class="item-icon">💣</div>
+                <div class="item-title">FRAG GRENADE x2</div>
+              </div>
+              <div class="grid-item">
+                <div class="item-icon">💨</div>
+                <div class="item-title">SMOKE GRENADE x2</div>
+              </div>
+              <div class="grid-item">
+                <div class="item-icon">📦</div>
+                <div class="item-title">5.56MM (180)</div>
+              </div>
+              <div class="grid-item">
+                <div class="item-icon">📦</div>
+                <div class="item-title">12G SHELLS (24)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 6: AIRCRAFT FLIGHT & JUMP -->
+    <section id="screen-aircraft" class="screen-view">
+      <div class="aircraft-hud">
+        <div class="flight-top-stats">
+          <div class="flight-stat-card">
+            <span class="f-label">PLAYERS IN CABIN</span>
+            <span id="aircraft-cabin-count" class="f-value text-yellow">50 / 50</span>
+          </div>
+          <div class="flight-stat-card">
+            <span class="f-label">ALTITUDE</span>
+            <span class="f-value">1,450 M</span>
+          </div>
+          <div class="flight-stat-card">
+            <span class="f-label">FLIGHT SPEED</span>
+            <span class="f-value">220 KM/H</span>
+          </div>
+        </div>
+
+        <div class="jump-prompt-container">
+          <button id="btn-jump-action" class="btn-jump-massive pulse">
+            <span>[F] JUMP FROM CARGO HATCH</span>
+          </button>
+          <div class="jump-subtext">Auto-drop in <span id="autodrop-timer" class="text-yellow">00:08</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 7: FREEFALL & PARACHUTE HUD -->
+    <section id="screen-parachute" class="screen-view">
+      <div class="parachute-hud">
+        <div class="altimeter-gauge">
+          <div class="alt-bar"><div id="altimeter-fill" class="alt-fill"></div></div>
+          <div class="alt-readout"><span id="live-altitude">650</span> M</div>
+        </div>
+
+        <div class="parachute-instructions">
+          <div class="p-title">FREEFALL DESCENT</div>
+          <div class="p-control-hints">
+            <span>[W/A/S/D] Steer Vector</span> &bull; <span>[SPACE] Deploy Parachute Canopy</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 8: IN-GAME TACTICAL HUD -->
+    <section id="screen-game-hud" class="screen-view">
+      <!-- Top Compass Ribbon -->
+      <div class="compass-wrapper">
+        <div class="compass-marker center-marker">▼</div>
+        <div id="compass-ribbon" class="compass-ribbon">
+          <span>N</span><span>·</span><span>30</span><span>·</span><span>60</span><span>·</span><span>E</span><span>·</span><span>120</span><span>·</span><span>150</span><span>·</span><span>S</span><span>·</span><span>210</span><span>·</span><span>240</span><span>·</span><span>W</span><span>·</span><span>300</span><span>·</span><span>330</span><span>·</span>
+        </div>
+      </div>
+
+      <!-- Match Alive, Kill, & Threat Level Counters -->
+      <div class="hud-top-right">
+        <div class="match-stat-chip threat-chip">
+          <span class="icon" id="threat-icon">🛡️</span> THREAT: <strong id="hud-threat-level" class="text-success">RECRUIT (TIER 1)</strong>
+        </div>
+        <div class="match-stat-chip">
+          <span class="icon">👥</span> ALIVE: <strong id="hud-alive-count" class="text-yellow">50</strong>
+        </div>
+        <div class="match-stat-chip">
+          <span class="icon">💀</span> KILLS: <strong id="hud-kill-count" class="text-yellow">0</strong>
+        </div>
+      </div>
+
+      <!-- Kill Feed Banner -->
+      <div id="kill-feed-container" class="kill-feed"></div>
+
+      <!-- Minimap Radar Viewport -->
+      <div class="minimap-container">
+        <canvas id="minimap-canvas" width="160" height="160"></canvas>
+        <div class="minimap-zone-timer">
+          <span class="icon">⚠️</span> ZONE: <strong id="zone-countdown" class="text-yellow">01:45</strong>
+        </div>
+      </div>
+
+      <!-- Hit Marker & Crosshair -->
+      <div id="crosshair-container" class="crosshair-center">
+        <div class="crosshair-dot"></div>
+        <div class="crosshair-line top"></div>
+        <div class="crosshair-line bottom"></div>
+        <div class="crosshair-line left"></div>
+        <div class="crosshair-line right"></div>
+        <!-- Hit Indicator (Flashes on Damage) -->
+        <div id="hit-marker" class="hitmarker-lines">✕</div>
+      </div>
+
+      <!-- ADS Scope Vignette Layer -->
+      <div id="ads-vignette" class="ads-scope-overlay">
+        <div class="scope-reticle-circle"></div>
+      </div>
+
+      <!-- Damage Taken Directional Flash -->
+      <div id="damage-vignette" class="damage-flash-overlay"></div>
+
+      <!-- Tactical Quick Action Prompts -->
+      <div id="interact-prompt" class="interact-tooltip">
+        <span class="key-badge">F</span> OPEN SUPPLY CRATE
+      </div>
+
+      <!-- Bottom Player Status Bars -->
+      <div class="hud-bottom-bar">
+        <!-- Health & Armor Meters -->
+        <div class="player-vitals-card">
+          <div class="vital-row">
+            <span class="vital-tag">🦺 ARMOR</span>
+            <div class="vital-track"><div id="hud-armor-bar" class="vital-fill armor-fill" style="width: 100%"></div></div>
+            <span id="hud-armor-val" class="vital-num">100</span>
+          </div>
+          <div class="vital-row">
+            <span class="vital-tag">❤️ HEALTH</span>
+            <div class="vital-track"><div id="hud-health-bar" class="vital-fill hp-fill" style="width: 100%"></div></div>
+            <span id="hud-health-val" class="vital-num">100</span>
+          </div>
+        </div>
+
+        <!-- Active Weapon & Ammo Deck -->
+        <div class="weapon-hud-deck">
+          <div class="weapon-info">
+            <span class="fire-mode-tag">AUTO</span>
+            <div class="weapon-title">M4A1 SHADOW AR</div>
+          </div>
+          <div class="ammo-counter">
+            <span id="hud-mag-ammo" class="mag-ammo">30</span>
+            <span class="ammo-separator">/</span>
+            <span id="hud-res-ammo" class="res-ammo">180</span>
+          </div>
+          <div id="reload-spinner" class="reload-indicator">RELOADING...</div>
+        </div>
+      </div>
+
+      <!-- Radio Voice Transmission Banner -->
+      <div id="radio-shout-banner" class="radio-banner">
+        <span class="radio-icon">📻</span>
+        <div class="radio-text">
+          <span class="radio-sender">SHADOW_REAPER (YOU)</span>
+          <span id="radio-shout-msg" class="radio-msg">"ENEMY SPOTTED AT 210! ENGAGING TARGET!"</span>
+        </div>
+      </div>
+
+      <!-- Quick Tactical Utility Bar (Shout, Heal, Grenade) -->
+      <div class="hud-quick-tactical-bar">
+        <button id="btn-action-shout" class="tactical-action-btn shout-btn" title="Tactical Shout / Voice Ping [T]">
+          <span class="t-icon">📢</span>
+          <span class="t-label">SHOUT [T]</span>
+        </button>
+        <button id="btn-action-heal" class="tactical-action-btn heal-btn" title="Use Medkit [H]">
+          <span class="t-icon">💉</span>
+          <span class="t-label">HEAL [H]</span>
+        </button>
+        <button id="btn-action-grenade" class="tactical-action-btn grenade-btn" title="Throw Frag Grenade [G]">
+          <span class="t-icon">💣</span>
+          <span class="t-label">FRAG [G]</span>
+        </button>
+      </div>
+
+      <!-- On-Screen Virtual Touch Joystick (Mobile Friendly 360° Movement) -->
+      <div class="touch-controls-left">
+        <button id="btn-touch-run" class="dpad-run-btn" title="Toggle Auto Sprint [Shift]">
+          <span class="icon">⚡</span> SPRINT
+        </button>
+        <div id="joystick-zone" class="joystick-zone">
+          <div id="joystick-base" class="joystick-base">
+            <div class="joystick-ring-ticks">
+              <span class="tick tick-n">▲</span>
+              <span class="tick tick-s">▼</span>
+              <span class="tick tick-w">◀</span>
+              <span class="tick tick-e">▶</span>
+            </div>
+            <div id="joystick-knob" class="joystick-knob">
+              <div class="knob-center-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- On-Screen Tactical Action Buttons (Right Side) -->
+      <div class="touch-controls-right">
+        <!-- Fire & ADS Buttons -->
+        <button id="btn-touch-ads" class="action-round-btn ads-btn" title="Aim Down Sights [Right Click]">
+          <span class="btn-glyph">🎯</span>
+          <span class="btn-subtext">AIM</span>
+        </button>
+
+        <button id="btn-touch-fire" class="action-round-btn fire-btn" title="Fire Weapon [Left Click]">
+          <span class="btn-glyph">🔥</span>
+          <span class="btn-subtext">FIRE</span>
+        </button>
+
+        <button id="btn-touch-reload" class="action-round-btn reload-btn" title="Reload Magazine [R]">
+          <span class="btn-glyph">🔄</span>
+          <span class="btn-subtext">RELOAD</span>
+        </button>
+
+        <!-- Movement Stance (Jump, Crouch) -->
+        <button id="btn-touch-jump" class="action-round-btn jump-btn" title="Jump [Space]">
+          <span class="btn-glyph">🦘</span>
+          <span class="btn-subtext">JUMP</span>
+        </button>
+
+        <button id="btn-touch-crouch" class="action-round-btn crouch-btn" title="Crouch Stance [C]">
+          <span class="btn-glyph">🧎</span>
+          <span class="btn-subtext">CROUCH</span>
+        </button>
+      </div>
+
+      <!-- On-Screen Tactical Control Hints -->
+      <div class="hud-controls-hint">
+        <span>[WASD / On-Screen] Move</span> &bull; <span>[Shift / RUN] Sprint</span> &bull; <span>[Space / JUMP] Jump</span> &bull; <span>[C / CROUCH] Crouch</span> &bull; <span>[T / SHOUT] Voice Ping</span> &bull; <span>[H / HEAL] Medkit</span> &bull; <span>[G / FRAG] Grenade</span> &bull; <span>[Click / FIRE] Shoot</span>
+      </div>
+    </section>
+
+    <!-- SCREEN 9: MATCH RESULT (VICTORY / DEFEAT) -->
+    <section id="screen-result" class="screen-view">
+      <div class="result-modal-box">
+        <div id="result-badge-container">
+          <h1 id="result-banner-title" class="result-headline text-yellow">WINNER WINNER!</h1>
+          <div id="result-sub-badge" class="result-sub">APEX SURVIVOR &bull; RANK #1/50</div>
+        </div>
+
+        <div class="result-stats-matrix">
+          <div class="res-stat-card">
+            <span class="rs-label">ENEMIES ELIMINATED</span>
+            <span id="res-stat-kills" class="rs-val text-yellow">7</span>
+          </div>
+          <div class="res-stat-card">
+            <span class="rs-label">TOTAL DAMAGE</span>
+            <span id="res-stat-damage" class="rs-val">1,240</span>
+          </div>
+          <div class="res-stat-card">
+            <span class="rs-label">SURVIVAL DURATION</span>
+            <span id="res-stat-time" class="rs-val">04:32</span>
+          </div>
+          <div class="res-stat-card">
+            <span class="rs-label">XP EARNED</span>
+            <span id="res-stat-xp" class="rs-val text-yellow">+850 XP</span>
+          </div>
+        </div>
+
+        <div class="level-progress-card">
+          <div class="lp-header">
+            <span>OPERATOR PROGRESSION</span>
+            <span class="text-yellow">LEVEL 14 &rarr; 15</span>
+          </div>
+          <div class="lp-track"><div class="lp-fill" style="width: 75%"></div></div>
+        </div>
+
+        <div class="result-actions-row">
+          <button id="btn-result-play-again" class="btn-primary-yellow">
+            <span>🔄 PLAY AGAIN</span>
+          </button>
+          <button id="btn-result-menu" class="btn-secondary-outline">
+            <span>🏠 MAIN MENU</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
