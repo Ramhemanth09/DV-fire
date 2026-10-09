@@ -1692,4 +1692,138 @@ body, html {
     gap: 8px;
   }
   .rs-val { font-size: 1.6rem; }
+
+  .portal-places-grid {
+    grid-template-columns: 1fr;
+    max-height: 55vh;
+  }
+}
+
+/* =========================================================
+   PORTAL FAST-TRAVEL SYSTEM & WARP EFFECTS
+   ========================================================= */
+.portal-btn {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+.portal-btn:hover {
+  background: rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.6) !important;
+}
+
+.portal-modal-box {
+  width: 820px;
+  max-width: 95vw;
+}
+
+.portal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-icon {
+  font-size: 2.2rem;
+  animation: spinPortal 6s linear infinite;
+}
+
+@keyframes spinPortal {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.portal-instructions {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.portal-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.portal-place-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.portal-place-card:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  transform: translateY(-2px);
+}
+
+.portal-place-card.active {
+  border-color: var(--yellow-primary);
+  background: rgba(255, 212, 0, 0.12);
+  box-shadow: 0 0 15px var(--yellow-glow);
+}
+
+.place-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--yellow-primary);
+}
+
+.place-icon {
+  font-size: 2rem;
+}
+
+.place-name {
+  font-family: 'Teko', sans-serif;
+  font-size: 1.6rem;
+  color: var(--text-white);
+  line-height: 1;
+}
+
+.place-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.place-coords {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-top: 4px;
+}
+
+.portal-modal-footer {
+  margin-top: 25px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Warp Flash Visual Effect Overlay */
+.warp-flash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.15s ease-out;
+}
+
+.warp-flash-screen.active {
+  opacity: 0.9;
 }

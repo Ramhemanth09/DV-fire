@@ -219,12 +219,41 @@ class TacticalAudioEngine {
     nGain.connect(this.masterGain);
     noise.start(t);
   }
+
+  playWarp() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, t);
+    osc.frequency.exponentialRampToValueAtTime(1400, t + 0.4);
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.55);
+  }
 }
 
 const audio = new TacticalAudioEngine();
 
 // =========================================================
-// 2. CHARACTER & BOT DATABASE
+// 2. 5 STRATEGIC FAST-TRAVEL PORTAL DROPZONES (4-5 PLACES ONLY)
+// =========================================================
+const PORTAL_LOCATIONS = {
+  hangar: { name: 'CENTRAL HANGAR', x: 18, y: 0, z: -25, desc: 'Heavy military aircraft bay with tier-3 weapon spawns.' },
+  bunker: { name: 'MILITARY BUNKER', x: -20, y: 0, z: -18, desc: 'Fortified concrete shelter & subterranean cover.' },
+  watchtower: { name: 'WATCHTOWER OUTPOST', x: -22, y: 0, z: 15, desc: 'Elevated sniper observation post with 360° vision.' },
+  depot: { name: 'SUPPLY DEPOT', x: 10, y: 0, z: 8, desc: 'Airdrop crates, explosive barrels & tactical yard.' },
+  forest: { name: 'RIVER FOREST', x: 0, y: 0, z: 24, desc: 'Dense pine wilderness with river foliage for stealth.' }
+};
+
+let selectedPortalKey = 'hangar';
+
+// =========================================================
+// 3. CHARACTER & BOT DATABASE
 // =========================================================
 const OPERATORS = {
   raven: {
@@ -331,11 +360,14 @@ const UI = {
     aircraft: document.getElementById('screen-aircraft'),
     parachute: document.getElementById('screen-parachute'),
     gameHud: document.getElementById('screen-game-hud'),
-    result: document.getElementById('screen-result')
+    result: document.getElementById('screen-result'),
+    portal: document.getElementById('screen-portal')
   },
 
   showScreen(name) {
-    Object.values(this.screens).forEach(el => el.classList.remove('active'));
+    Object.values(this.screens).forEach(el => {
+      if (el) el.classList.remove('active');
+    });
     if (this.screens[name]) {
       this.screens[name].classList.add('active');
     }
@@ -426,9 +458,23 @@ const UI = {
     });
 
     // Action Buttons
+    document.getElementById('btn-action-portal').addEventListener('click', () => openPortalSelector());
+    document.getElementById('btn-close-portal').addEventListener('click', () => closePortalSelector());
     document.getElementById('btn-action-shout').addEventListener('click', () => triggerTacticalShout());
     document.getElementById('btn-action-heal').addEventListener('click', () => triggerPlayerHeal());
     document.getElementById('btn-action-grenade').addEventListener('click', () => triggerThrowGrenade());
+
+    document.querySelectorAll('.portal-place-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.portal-place-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selectedPortalKey = card.getAttribute('data-place');
+      });
+    });
+
+    document.getElementById('btn-execute-teleport').addEventListener('click', () => {
+      executePortalWarp();
+    });
 
     const btnJump = document.getElementById('btn-touch-jump');
     btnJump.addEventListener('click', () => triggerPlayerJump());
@@ -746,6 +792,7 @@ function createRealisticHumanSoldier(customSkin = null, isPlayer = false) {
 }
 
 // =========================================================
+// =========================================================
 // 5. 3D GAME ENGINE & PROGRESSIVE AI SYSTEM
 // =========================================================
 class ShadowIslandGame {
@@ -754,15 +801,24 @@ class ShadowIslandGame {
     this.scene = null;
     this.camera = null;
     this.renderer = null;
+    this.clock = new THREE.Clock();
     
     // Entities & Physics
     this.player = null;
     this.bots = [];
     this.obstacles = [];
+    this.portalPads = [];
     this.tracers = [];
     this.grenades = [];
     this.safeZone = null;
     
+    // Performance cached vectors to eliminate Garbage Collection lag
+    this._forward = new THREE.Vector3();
+    this._right = new THREE.Vector3();
+    this._moveVec = new THREE.Vector3();
+    this._camPos = new THREE.Vector3();
+    this._lookTarget = new THREE.Vector3();
+
     // Match State
     this.matchActive = false;
     this.matchPhase = 'LOBBY';
@@ -795,11 +851,11 @@ class ShadowIslandGame {
     this.camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
     this.camera.position.set(0, 5, 10);
 
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.setupLighting();
     this.buildTacticalEnvironment();
@@ -808,14 +864,20 @@ class ShadowIslandGame {
   }
 
   setupLighting() {
-    const ambient = new THREE.AmbientLight(0xffeedd, 0.65);
+    const ambient = new THREE.AmbientLight(0xffeedd, 0.7);
     this.scene.add(ambient);
 
-    const sunLight = new THREE.DirectionalLight(0xffaa44, 1.4);
+    const sunLight = new THREE.DirectionalLight(0xffaa44, 1.35);
     sunLight.position.set(60, 80, -50);
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 200;
+    sunLight.shadow.camera.left = -60;
+    sunLight.shadow.camera.right = 60;
+    sunLight.shadow.camera.top = 60;
+    sunLight.shadow.camera.bottom = -60;
     this.scene.add(sunLight);
 
     const seaFill = new THREE.DirectionalLight(0x38bdf8, 0.35);
@@ -824,7 +886,10 @@ class ShadowIslandGame {
   }
 
   buildTacticalEnvironment() {
-    const groundGeo = new THREE.PlaneGeometry(240, 240, 48, 48);
+    this.obstacles = [];
+    this.portalPads = [];
+
+    const groundGeo = new THREE.PlaneGeometry(240, 240, 40, 40);
     const pos = groundGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
@@ -848,28 +913,76 @@ class ShadowIslandGame {
     tarmac.receiveShadow = true;
     this.scene.add(tarmac);
 
+    // Landmarks
     this.buildMilitaryHangar(18, 0, -25);
     this.buildWatchtower(-22, 0, 15);
     this.buildTacticalBunker(-20, 0, -18);
 
-    this.createCoverBarrier(0, 0, -10, 8, 1.4, 0.8, 0);
-    this.createCoverBarrier(-8, 0, 4, 6, 1.4, 0.8, Math.PI / 4);
-    this.createCoverBarrier(10, 0, 8, 6, 1.4, 0.8, -Math.PI / 6);
-    this.createCoverBarrier(0, 0, 16, 10, 1.4, 0.8, 0);
+    // Cover Barriers (with collision boxes)
+    this.createCoverBarrier(0, 0, -10, 8, 1.4, 1.0, 0);
+    this.createCoverBarrier(-8, 0, 4, 6, 1.4, 1.0, Math.PI / 4);
+    this.createCoverBarrier(10, 0, 8, 6, 1.4, 1.0, -Math.PI / 6);
+    this.createCoverBarrier(0, 0, 16, 10, 1.4, 1.0, 0);
 
+    // Supply Crates
     this.createSupplyCrate(5, 0, -5, 0x1e3a8a);
     this.createSupplyCrate(-6, 0, -8, 0xb45309);
     this.createSupplyCrate(12, 0, 4, 0x065f46);
     this.createOilDrum(6.5, 0, -4.5);
     this.createOilDrum(7.2, 0, -4.8);
 
-    for (let i = 0; i < 30; i++) {
+    // Pine Trees
+    for (let i = 0; i < 28; i++) {
       const tx = (Math.random() - 0.5) * 180;
       const tz = (Math.random() - 0.5) * 180;
-      if (Math.hypot(tx, tz) > 28) {
+      if (Math.hypot(tx, tz) > 26) {
         this.createPineTree(tx, 0, tz);
       }
     }
+
+    // Build the 5 Holographic Fast-Travel Teleport Portal Pads
+    Object.keys(PORTAL_LOCATIONS).forEach(key => {
+      const loc = PORTAL_LOCATIONS[key];
+      this.createPortalPad(key, loc.x, loc.z, loc.name);
+    });
+  }
+
+  createPortalPad(key, x, z, name) {
+    const padGroup = new THREE.Group();
+
+    // Base glowing platform ring
+    const baseGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.1;
+    padGroup.add(base);
+
+    // Neon cyan inner core
+    const coreGeo = new THREE.CylinderGeometry(1.6, 1.6, 0.22, 24);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.y = 0.12;
+    padGroup.add(core);
+
+    // Holographic rotating rune ring
+    const ringGeo = new THREE.RingGeometry(1.4, 1.8, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFD400, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.24;
+    padGroup.add(ring);
+
+    // Vertical warp light pillar
+    const beamGeo = new THREE.CylinderGeometry(1.2, 1.2, 6, 16, 1, true);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.y = 3.0;
+    padGroup.add(beam);
+
+    padGroup.position.set(x, 0, z);
+    this.scene.add(padGroup);
+
+    this.portalPads.push({ key, x, z, group: padGroup, ring, beam });
   }
 
   buildMilitaryHangar(x, y, z) {
@@ -877,17 +990,17 @@ class ShadowIslandGame {
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.3 });
 
-    const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1, 7, 24), wallMat);
+    const wall1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7, 24), wallMat);
     wall1.position.set(-10, 3.5, 0);
     wall1.castShadow = true;
     group.add(wall1);
 
-    const wall2 = new THREE.Mesh(new THREE.BoxGeometry(1, 7, 24), wallMat);
+    const wall2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7, 24), wallMat);
     wall2.position.set(10, 3.5, 0);
     wall2.castShadow = true;
     group.add(wall2);
 
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(20, 7, 1), wallMat);
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(20, 7, 1.2), wallMat);
     backWall.position.set(0, 3.5, -12);
     backWall.castShadow = true;
     group.add(backWall);
@@ -899,7 +1012,11 @@ class ShadowIslandGame {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    this.obstacles.push({ x, z, radius: 12 });
+
+    // Collision boxes for hangar walls
+    this.obstacles.push({ type: 'box', minX: x - 11, maxX: x - 9, minZ: z - 12, maxZ: z + 12 });
+    this.obstacles.push({ type: 'box', minX: x + 9, maxX: x + 11, minZ: z - 12, maxZ: z + 12 });
+    this.obstacles.push({ type: 'box', minX: x - 10, maxX: x + 10, minZ: z - 13, maxZ: z - 11 });
   }
 
   buildWatchtower(x, y, z) {
@@ -925,7 +1042,8 @@ class ShadowIslandGame {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    this.obstacles.push({ x, z, radius: 4 });
+
+    this.obstacles.push({ type: 'circle', x, z, radius: 3.2 });
   }
 
   buildTacticalBunker(x, y, z) {
@@ -934,7 +1052,8 @@ class ShadowIslandGame {
     bunker.position.set(x, 2, z);
     bunker.castShadow = true;
     this.scene.add(bunker);
-    this.obstacles.push({ x, z, radius: 6 });
+
+    this.obstacles.push({ type: 'box', minX: x - 6.2, maxX: x + 6.2, minZ: z - 5.2, maxZ: z + 5.2 });
   }
 
   createCoverBarrier(x, y, z, w, h, d, rotY) {
@@ -944,7 +1063,10 @@ class ShadowIslandGame {
     barrier.rotation.y = rotY;
     barrier.castShadow = true;
     this.scene.add(barrier);
-    this.obstacles.push({ x, z, radius: w / 2 });
+
+    const halfW = (Math.abs(Math.cos(rotY)) * w + Math.abs(Math.sin(rotY)) * d) / 2 + 0.3;
+    const halfD = (Math.abs(Math.sin(rotY)) * w + Math.abs(Math.cos(rotY)) * d) / 2 + 0.3;
+    this.obstacles.push({ type: 'box', minX: x - halfW, maxX: x + halfW, minZ: z - halfD, maxZ: z + halfD });
   }
 
   createSupplyCrate(x, y, z, color) {
@@ -953,7 +1075,8 @@ class ShadowIslandGame {
     crate.position.set(x, 0.9, z);
     crate.castShadow = true;
     this.scene.add(crate);
-    this.obstacles.push({ x, z, radius: 1.5 });
+
+    this.obstacles.push({ type: 'box', minX: x - 1.2, maxX: x + 1.2, minZ: z - 1.2, maxZ: z + 1.2 });
   }
 
   createOilDrum(x, y, z) {
@@ -962,6 +1085,8 @@ class ShadowIslandGame {
     drum.position.set(x, 0.8, z);
     drum.castShadow = true;
     this.scene.add(drum);
+
+    this.obstacles.push({ type: 'circle', x, z, radius: 0.75 });
   }
 
   createPineTree(x, y, z) {
@@ -981,10 +1106,12 @@ class ShadowIslandGame {
     }
     group.position.set(x, y, z);
     this.scene.add(group);
+
+    this.obstacles.push({ type: 'circle', x, z, radius: 0.85 });
   }
 
   createSafeZone() {
-    const zoneGeo = new THREE.CylinderGeometry(this.zoneRadius, this.zoneRadius, 60, 48, 1, true);
+    const zoneGeo = new THREE.CylinderGeometry(this.zoneRadius, this.zoneRadius, 60, 40, 1, true);
     const zoneMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
@@ -1012,10 +1139,10 @@ class ShadowIslandGame {
       isSprinting: false,
       isJumping: false,
       verticalVelocity: 0,
-      gravity: -22.0,
-      jumpSpeed: 8.2,
+      gravity: -24.0,
+      jumpSpeed: 8.5,
       magazineAmmo: 30,
-      reserveAmmo: 180,
+      reserveAmmo: Infinity,
       maxMag: 30,
       isReloading: false,
       nextFireTime: 0,
@@ -1025,6 +1152,55 @@ class ShadowIslandGame {
 
     this.player.mesh.position.copy(this.player.position);
     this.scene.add(this.player.mesh);
+  }
+
+  // =========================================================
+  // SOLID OBSTACLE COLLISION RESOLVER (CANNOT WALK INTO BLOCKS)
+  // =========================================================
+  resolveObstacleCollisions(pos, entityRadius = 0.45) {
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const obs = this.obstacles[i];
+      if (obs.type === 'box') {
+        const clampedX = Math.max(obs.minX, Math.min(pos.x, obs.maxX));
+        const clampedZ = Math.max(obs.minZ, Math.min(pos.z, obs.maxZ));
+        const dx = pos.x - clampedX;
+        const dz = pos.z - clampedZ;
+        const distSq = dx * dx + dz * dz;
+
+        if (distSq < entityRadius * entityRadius) {
+          const dist = Math.sqrt(distSq);
+          if (dist > 0.001) {
+            const overlap = entityRadius - dist;
+            pos.x += (dx / dist) * overlap;
+            pos.z += (dz / dist) * overlap;
+          } else {
+            // Inside box, push out along nearest axis
+            const dLeft = Math.abs(pos.x - obs.minX);
+            const dRight = Math.abs(pos.x - obs.maxX);
+            const dTop = Math.abs(pos.z - obs.minZ);
+            const dBottom = Math.abs(pos.z - obs.maxZ);
+            const minSide = Math.min(dLeft, dRight, dTop, dBottom);
+
+            if (minSide === dLeft) pos.x = obs.minX - entityRadius;
+            else if (minSide === dRight) pos.x = obs.maxX + entityRadius;
+            else if (minSide === dTop) pos.z = obs.minZ - entityRadius;
+            else pos.z = obs.maxZ + entityRadius;
+          }
+        }
+      } else if (obs.type === 'circle') {
+        const dx = pos.x - obs.x;
+        const dz = pos.z - obs.z;
+        const distSq = dx * dx + dz * dz;
+        const minDist = entityRadius + obs.radius;
+
+        if (distSq < minDist * minDist) {
+          const dist = Math.sqrt(distSq) || 0.001;
+          const overlap = minDist - dist;
+          pos.x += (dx / dist) * overlap;
+          pos.z += (dz / dist) * overlap;
+        }
+      }
+    }
   }
 
   getThreatProfile() {
@@ -1236,6 +1412,9 @@ class ShadowIslandGame {
       if (e.code === 'Space' && this.matchActive) {
         triggerPlayerJump();
       }
+      if (e.code === 'KeyP' && this.matchActive) {
+        openPortalSelector();
+      }
       if (e.code === 'KeyT' && this.matchActive) {
         triggerTacticalShout();
       }
@@ -1253,7 +1432,7 @@ class ShadowIslandGame {
 
     window.addEventListener('mousedown', (e) => {
       if (!this.matchActive) return;
-      if (e.target.closest('#screen-game-hud button, #joystick-zone')) return;
+      if (e.target.closest('#screen-game-hud button, #joystick-zone, #screen-portal')) return;
 
       if (!this.mouse.isLocked && (this.matchPhase === 'COMBAT' || this.matchPhase === 'PARACHUTE')) {
         this.canvas.requestPointerLock();
@@ -1294,7 +1473,7 @@ class ShadowIslandGame {
   }
 
   // =========================================================
-  // 6. COMBAT & WEAPON ACTIONS
+  // 6. COMBAT & WEAPON ACTIONS (UNLIMITED AMMO + RELOAD)
   // =========================================================
   firePlayerWeapon() {
     const now = performance.now() / 1000;
@@ -1426,14 +1605,12 @@ class ShadowIslandGame {
     audio.playReload();
 
     setTimeout(() => {
-      const needed = this.player.maxMag - this.player.magazineAmmo;
-      const add = Math.min(needed, this.player.reserveAmmo);
-      this.player.magazineAmmo += add;
-      this.player.reserveAmmo -= add;
+      // Unlimited reserve ammo: refill entire magazine capacity to full (30)
+      this.player.magazineAmmo = this.player.maxMag;
       this.player.isReloading = false;
       document.getElementById('reload-spinner').style.display = 'none';
       this.updateHUDAmmo();
-    }, 1800);
+    }, 1500);
   }
 
   spawnTracer(start, end) {
@@ -1492,11 +1669,11 @@ class ShadowIslandGame {
 
   updateHUDAmmo() {
     document.getElementById('hud-mag-ammo').textContent = this.player.magazineAmmo;
-    document.getElementById('hud-res-ammo').textContent = this.player.reserveAmmo;
+    document.getElementById('hud-res-ammo').textContent = '∞';
   }
 
   // =========================================================
-  // 7. PROGRESSIVE MULTI-BOT AI & ANIMATION LOOP
+  // 7. PROGRESSIVE MULTI-BOT AI & OBSTACLE COLLISION LOOP
   // =========================================================
   updateAI(dt) {
     if (this.matchPhase !== 'COMBAT') return;
@@ -1573,6 +1750,9 @@ class ShadowIslandGame {
         isMoving = true;
       }
 
+      // Resolve Obstacle Collisions for Bots (Prevents walking inside blocks)
+      this.resolveObstacleCollisions(botPos, 0.45);
+
       // Animate Bot Human Limb Strides
       this.animateHumanLimbs(bot.mesh, isMoving, 3.5, dt);
     }
@@ -1619,11 +1799,16 @@ class ShadowIslandGame {
   }
 
   // =========================================================
-  // 8. MAIN GAME TICK ANIMATION LOOP
+  // 8. 60FPS BUTTERY SMOOTH MAIN GAME LOOP
   // =========================================================
   animate() {
     requestAnimationFrame(this.animate);
-    const dt = 0.016;
+    const dt = Math.min(this.clock.getDelta(), 0.04);
+
+    // Rotate holographic portal rings
+    for (let i = 0; i < this.portalPads.length; i++) {
+      this.portalPads[i].ring.rotation.z += dt * 1.5;
+    }
 
     if (this.matchActive && this.matchPhase === 'COMBAT') {
       this.updatePlayerMovement(dt);
@@ -1656,34 +1841,57 @@ class ShadowIslandGame {
   updatePlayerMovement(dt) {
     if (this.player.isDead) return;
 
-    const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw));
-    const right = new THREE.Vector3(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw));
+    this._forward.set(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw));
+    this._right.set(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw));
 
-    const moveVec = new THREE.Vector3();
+    this._moveVec.set(0, 0, 0);
 
     // 1. Keyboard Inputs
-    if (this.keys['KeyW']) moveVec.add(forward);
-    if (this.keys['KeyS']) moveVec.sub(forward);
-    if (this.keys['KeyD']) moveVec.add(right);
-    if (this.keys['KeyA']) moveVec.sub(right);
+    if (this.keys['KeyW']) this._moveVec.add(this._forward);
+    if (this.keys['KeyS']) this._moveVec.sub(this._forward);
+    if (this.keys['KeyD']) this._moveVec.add(this._right);
+    if (this.keys['KeyA']) this._moveVec.sub(this._right);
 
     // 2. Virtual Touch Joystick Inputs (Mobile phone 360° motion)
-    if (isJoystickActive || Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05) {
-      // joystickInput.y < 0 is forward, > 0 is backward
-      moveVec.add(forward.clone().multiplyScalar(-joystickInput.y));
-      moveVec.add(right.clone().multiplyScalar(joystickInput.x));
+    const joyMag = Math.hypot(joystickInput.x, joystickInput.y);
+    if (isJoystickActive || joyMag > 0.05) {
+      this._moveVec.add(this._forward.clone().multiplyScalar(-joystickInput.y));
+      this._moveVec.add(this._right.clone().multiplyScalar(joystickInput.x));
     }
 
-    const isRunning = this.player.isSprinting || !!this.keys['ShiftLeft'] || !!this.keys['ShiftRight'];
-    const speed = this.player.isCrouched ? 2.8 : (isRunning && !this.mouse.isADS ? 8.5 : 4.6);
-    const isMoving = moveVec.lengthSq() > 0.01;
+    // Auto-sprint if joystick pushed far (> 0.55) or Shift/Sprint button active
+    const isRunning = this.player.isSprinting || !!this.keys['ShiftLeft'] || !!this.keys['ShiftRight'] || joyMag > 0.55;
+    const speed = this.player.isCrouched ? 2.8 : (isRunning && !this.mouse.isADS ? 9.8 : 5.4);
+    const isMoving = this._moveVec.lengthSq() > 0.01;
 
     if (isMoving) {
-      moveVec.normalize();
-      this.player.position.add(moveVec.multiplyScalar(speed * dt));
+      this._moveVec.normalize();
+      this.player.position.add(this._moveVec.multiplyScalar(speed * dt));
       if (this.player.isGrounded && Math.random() < (isRunning ? 0.09 : 0.05)) {
         audio.playFootstep();
       }
+    }
+
+    // Obstacle Collision Resolution for Player (Prevents walking inside blocks)
+    this.resolveObstacleCollisions(this.player.position, 0.45);
+
+    // Check distance to Teleport Portal Pads
+    let nearPortal = false;
+    for (let pad of this.portalPads) {
+      const dist = Math.hypot(this.player.position.x - pad.x, this.player.position.z - pad.z);
+      if (dist < 2.5) {
+        nearPortal = true;
+        const prompt = document.getElementById('interact-prompt');
+        if (prompt) {
+          prompt.innerHTML = `<span class="key-badge">P</span> STEP INTO QUANTUM PORTAL [${pad.key.toUpperCase()}]`;
+          prompt.style.display = 'flex';
+        }
+        break;
+      }
+    }
+    if (!nearPortal) {
+      const prompt = document.getElementById('interact-prompt');
+      if (prompt && prompt.innerHTML.includes('QUANTUM PORTAL')) prompt.style.display = 'none';
     }
 
     // Animate Player Realistic Human Limbs
@@ -1739,21 +1947,20 @@ class ShadowIslandGame {
 
     const shoulderOffset = isADS ? new THREE.Vector3(0.5, 1.6, -1.2) : new THREE.Vector3(0.8, 1.8, -3.2);
     
-    const camPos = this.player.position.clone()
-      .add(new THREE.Vector3(
-        -Math.sin(this.cameraYaw) * shoulderOffset.z + Math.cos(this.cameraYaw) * shoulderOffset.x,
-        shoulderOffset.y - Math.sin(this.cameraPitch) * 2.2,
-        -Math.cos(this.cameraYaw) * shoulderOffset.z - Math.sin(this.cameraYaw) * shoulderOffset.x
-      ));
+    this._camPos.set(
+      this.player.position.x - Math.sin(this.cameraYaw) * shoulderOffset.z + Math.cos(this.cameraYaw) * shoulderOffset.x,
+      this.player.position.y + shoulderOffset.y - Math.sin(this.cameraPitch) * 2.2,
+      this.player.position.z - Math.cos(this.cameraYaw) * shoulderOffset.z - Math.sin(this.cameraYaw) * shoulderOffset.x
+    );
 
-    this.camera.position.copy(camPos);
+    this.camera.position.copy(this._camPos);
     
-    const lookTarget = this.player.position.clone().add(new THREE.Vector3(
-      -Math.sin(this.cameraYaw) * 50,
-      1.5 + Math.sin(this.cameraPitch) * 50,
-      -Math.cos(this.cameraYaw) * 50
-    ));
-    this.camera.lookAt(lookTarget);
+    this._lookTarget.set(
+      this.player.position.x - Math.sin(this.cameraYaw) * 50,
+      this.player.position.y + 1.5 + Math.sin(this.cameraPitch) * 50,
+      this.player.position.z - Math.cos(this.cameraYaw) * 50
+    );
+    this.camera.lookAt(this._lookTarget);
   }
 
   updateAircraft() {
@@ -1874,7 +2081,57 @@ const game = new ShadowIslandGame();
 UI.initListeners();
 
 // =========================================================
-// 9. TACTICAL ACTION UTILITIES (Jump, Shout, Heal, Grenade)
+// 9. FAST-TRAVEL QUANTUM PORTAL SYSTEM (4-5 PLACES ONLY)
+// =========================================================
+function openPortalSelector() {
+  audio.playClick(audio.ctx ? audio.ctx.currentTime : 0, 700, 0.05);
+  document.exitPointerLock();
+  UI.showScreen('portal');
+}
+
+function closePortalSelector() {
+  if (game.matchActive) {
+    if (game.matchPhase === 'AIRCRAFT') UI.showScreen('aircraft');
+    else if (game.matchPhase === 'PARACHUTE') UI.showScreen('parachute');
+    else UI.showScreen('gameHud');
+  } else {
+    UI.showScreen('mainMenu');
+  }
+}
+
+function executePortalWarp() {
+  teleportPlayerTo(selectedPortalKey);
+  closePortalSelector();
+}
+
+function teleportPlayerTo(placeKey) {
+  const target = PORTAL_LOCATIONS[placeKey] || PORTAL_LOCATIONS.hangar;
+  audio.playWarp();
+
+  // Warp screen flash VFX
+  const warpVFX = document.getElementById('warp-vfx-overlay');
+  if (warpVFX) {
+    warpVFX.classList.add('active');
+    setTimeout(() => warpVFX.classList.remove('active'), 250);
+  }
+
+  if (game.player) {
+    game.player.position.set(target.x, 0, target.z);
+    game.player.mesh.position.copy(game.player.position);
+    game.player.verticalVelocity = 0;
+    game.player.isGrounded = true;
+    game.resolveObstacleCollisions(game.player.position, 0.45);
+  }
+
+  if (game.matchPhase === 'AIRCRAFT' || game.matchPhase === 'PARACHUTE') {
+    game.matchPhase = 'COMBAT';
+  }
+
+  game.addKillFeedEntry('QUANTUM_PORTAL', `Warped to ${target.name}`);
+}
+
+// =========================================================
+// 10. TACTICAL ACTION UTILITIES (Jump, Shout, Heal, Grenade)
 // =========================================================
 function triggerPlayerJump() {
   if (game.player.isGrounded && !game.player.isJumping) {
@@ -1944,7 +2201,7 @@ function triggerThrowGrenade() {
 }
 
 // =========================================================
-// 10. DROP & COMBAT TRANSITION SEQUENCER
+// 11. DROP & COMBAT TRANSITION SEQUENCER
 // =========================================================
 function startMatchDropSequence() {
   audio.init();
@@ -1953,7 +2210,7 @@ function startMatchDropSequence() {
   game.player.health = 100;
   game.player.armor = 100;
   game.player.magazineAmmo = 30;
-  game.player.reserveAmmo = 180;
+  game.player.reserveAmmo = Infinity;
   game.player.isDead = false;
   game.playerKills = 0;
   game.matchDamage = 0;

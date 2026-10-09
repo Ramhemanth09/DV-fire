@@ -446,7 +446,7 @@
           <div class="ammo-counter">
             <span id="hud-mag-ammo" class="mag-ammo">30</span>
             <span class="ammo-separator">/</span>
-            <span id="hud-res-ammo" class="res-ammo">180</span>
+            <span id="hud-res-ammo" class="res-ammo">∞</span>
           </div>
           <div id="reload-spinner" class="reload-indicator">RELOADING...</div>
         </div>
@@ -461,8 +461,12 @@
         </div>
       </div>
 
-      <!-- Quick Tactical Utility Bar (Shout, Heal, Grenade) -->
+      <!-- Quick Tactical Utility Bar (Portal, Shout, Heal, Grenade) -->
       <div class="hud-quick-tactical-bar">
+        <button id="btn-action-portal" class="tactical-action-btn portal-btn" title="Fast-Travel Portal / Drop Zone [P]">
+          <span class="t-icon">🌀</span>
+          <span class="t-label">PORTAL [P]</span>
+        </button>
         <button id="btn-action-shout" class="tactical-action-btn shout-btn" title="Tactical Shout / Voice Ping [T]">
           <span class="t-icon">📢</span>
           <span class="t-label">SHOUT [T]</span>
@@ -578,6 +582,78 @@
         </div>
       </div>
     </section>
+
+    <!-- SCREEN 10: FAST-TRAVEL PORTAL / DROP SELECTOR (4-5 PLACES) -->
+    <section id="screen-portal" class="screen-view">
+      <div class="screen-modal-content portal-modal-box">
+        <div class="modal-header">
+          <div class="portal-header-title">
+            <span class="portal-icon">🌀</span>
+            <h2 class="modal-title">QUANTUM FAST-TRAVEL PORTAL</h2>
+          </div>
+          <button class="btn-close-modal" id="btn-close-portal">✕</button>
+        </div>
+        <p class="portal-instructions">
+          Select 1 of the 5 key tactical dropzones on Shadow Island to teleport instantly:
+        </p>
+
+        <div class="portal-places-grid">
+          <!-- 1. Central Hangar -->
+          <div class="portal-place-card active" data-place="hangar" data-x="18" data-z="-25">
+            <div class="place-tag">ZONE 01</div>
+            <div class="place-icon">🏢</div>
+            <div class="place-name">CENTRAL HANGAR</div>
+            <div class="place-desc">Heavy military aircraft bay with tier-3 weapon spawns & high-ground roofs.</div>
+            <div class="place-coords">COORD: [18, -25] &bull; HIGH LOOT</div>
+          </div>
+
+          <!-- 2. Military Bunker -->
+          <div class="portal-place-card" data-place="bunker" data-x="-20" data-z="-18">
+            <div class="place-tag">ZONE 02</div>
+            <div class="place-icon">🛡️</div>
+            <div class="place-name">MILITARY BUNKER</div>
+            <div class="place-desc">Fortified concrete shelter with heavy barricades and subterranean cover.</div>
+            <div class="place-coords">COORD: [-20, -18] &bull; DEFENSIVE</div>
+          </div>
+
+          <!-- 3. Watchtower Outpost -->
+          <div class="portal-place-card" data-place="watchtower" data-x="-22" data-z="15">
+            <div class="place-tag">ZONE 03</div>
+            <div class="place-icon">🗼</div>
+            <div class="place-name">WATCHTOWER OUTPOST</div>
+            <div class="place-desc">Elevated sniper observation post with 360-degree island vision.</div>
+            <div class="place-coords">COORD: [-22, 15] &bull; HIGH GROUND</div>
+          </div>
+
+          <!-- 4. Supply Depot -->
+          <div class="portal-place-card" data-place="depot" data-x="10" data-z="8">
+            <div class="place-tag">ZONE 04</div>
+            <div class="place-icon">📦</div>
+            <div class="place-name">SUPPLY DEPOT</div>
+            <div class="place-desc">Airdrop crates, explosive barrels, and tactical supplies yard.</div>
+            <div class="place-coords">COORD: [10, 8] &bull; COMBAT ZONE</div>
+          </div>
+
+          <!-- 5. River Forest -->
+          <div class="portal-place-card" data-place="forest" data-x="0" data-z="24">
+            <div class="place-tag">ZONE 05</div>
+            <div class="place-icon">🌲</div>
+            <div class="place-name">RIVER FOREST</div>
+            <div class="place-desc">Dense pine wilderness with river foliage for stealth ambushes.</div>
+            <div class="place-coords">COORD: [0, 24] &bull; STEALTH FLANK</div>
+          </div>
+        </div>
+
+        <div class="portal-modal-footer">
+          <button id="btn-execute-teleport" class="btn-primary-yellow">
+            <span>🌀 WARP TO SELECTED LOCATION</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Warp VFX Overlay -->
+    <div id="warp-vfx-overlay" class="warp-flash-screen"></div>
 
   </div>
 
